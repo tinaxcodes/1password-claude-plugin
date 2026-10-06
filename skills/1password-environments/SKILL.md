@@ -28,7 +28,8 @@ Setup details: [reference.md](reference.md)
 **not supported**. Note that WSL reports as Linux and *is* supported.
 
 **Hard stop:** do **not** call `create_local_env_file`, attempt mounting, or run mount-only
-flows. Import is complete after `create_environment` (or resolve) + `append_variables`.
+flows. Import is complete after `create_environment` (or resolve) + importing the
+values (see **Import from a `.env` file**) + `list_variables` to verify.
 
 Recommend **1Password CLI environment injection** ([Load secrets into the environment](https://www.1password.dev/cli/secrets-environment-variables)).
 
@@ -54,15 +55,15 @@ before. Do not paste the prerequisites list into chat.
 
 Check state before asking anything: **`authenticate`** (fastest real prerequisite
 check — on failure, fix setup per [reference.md](reference.md) → **When things
-fail**), **`list_environments`**, then look for a `.env` with Read or Glob, never
-Bash.
+fail**), **`list_environments`**, then look for a `.env` with Glob — never Read
+or Bash (a `.env` holds secret values; see **Never read secret values**).
 
 Then route:
 
 | State | Go to |
 |-------|-------|
 | `.env` with real values | **Import from a `.env` file** — the common case |
-| Only `.env.example` / `.env.template` | **Import**, but ask for values; use the template's keys |
+| Only `.env.example` / `.env.template` | **Create new Environment** using the template's keys (templates hold no secrets, so Read is fine) → ask the user for values → `append_variables` |
 | No `.env`, no Environments | **Create new Environment** → `append_variables` → mount at `{workspace_root}/.env` |
 | Environment exists, no mount | **Mount existing Environment** |
 
@@ -73,7 +74,7 @@ Ask one question at a time, and only when the answer is not discoverable.
 **Import / create from `.env`** (including "using values from the project `.env`"):
 
 - [ ] Environment created or resolved
-- [ ] Variables appended via `append_variables`
+- [ ] User chose an import method, the variables were imported, and `list_variables` shows the names
 - [ ] `create_local_env_file` at the **source** `.env` absolute path — **always**
 - [ ] Mount verified with `list_local_env_files`
 
@@ -81,7 +82,7 @@ Mounting at the source `.env` path is mandatory, not optional follow-up. The
 **only** exception is the user explicitly opting out ("without mounting", "do not
 mount", "skip the mount"). Never ask "want me to mount?" — just mount.
 
-Stopping after `create_environment` + `append_variables` is **incomplete**.
+Stopping after the import, before mounting, is **incomplete**.
 `list_variables` is not mount verification. Do not report success until the mount
 checklist is done.
 
@@ -97,6 +98,8 @@ On **Windows**, skip mount steps — see **Windows** above.
 - Offer mounting as optional follow-up — it is mandatory on import
 - Call `create_environment` when `list_environments` already shows that name — ask the user first (see **Duplicate environment name**)
 - Reveal secret values in chat
+- Read, Grep, `cat`, or otherwise parse a `.env` file that holds real values, unless the user chose to let Claude import it — see **Never read secret values**
+- Choose the import method for the user — always ask (step 4 of **Import from a `.env` file**)
 - Read a mounted `.env` path — once mounted, the path is a live FIFO (named pipe); use `list_variables` instead
 - Verify a mount with **any** shell check (`test -f`, `[ -f ]`, `find -type f`, `test -p`, etc.). Use `list_local_env_files` — it is the only check that reflects both file state and whether the mount is *enabled* in 1Password. A disabled mount leaves the FIFO on disk, so `test -p` succeeds while the hook keeps blocking every Bash command. Shell checks are also unusable in exactly the broken case: when a mount is missing or invalid the hook denies all Bash, so the check cannot run. A failed `-f` check does not mean the mount is missing
 
@@ -139,17 +142,33 @@ If it does, **stop and ask the user** how they want to proceed. Offer options su
 Do not silently choose one of these paths. Do not call `create_environment` with a
 name that already exists unless the user has explicitly chosen a different name.
 
+## Never read secret values
+
+Anything you read becomes part of the conversation: it is sent to the model and
+saved in the session transcript. Keep secret values out of it:
+
+- Do not read a `.env` file that holds real values — not with Read, Grep, or any shell command — unless the user chose **Let Claude import them** in step 4 of **Import from a `.env` file**. Templates (`.env.example`, `.env.template`, `.env.sample`) are fine to read.
+- By default, values get into 1Password through the desktop app's **Import .env file**, which reads the file without passing values through you.
+- Use `append_variables` only for values the user gives you directly, and only when they explicitly ask to add or update variables. If the user pasted a secret into chat, refer to it by variable name and never repeat it back.
+
 ## Import from a `.env` file
 
 Default path: `{workspace_root}/.env` unless the user names another path.
 
-1. **Read** the `.env` file with the Read tool to get its keys and values. Strip optional surrounding quotes from values. Pass values to MCP only — never paste secret values into chat.
+1. **Confirm the file exists** with Glob. Do not read it.
 2. **`authenticate`** → `accountId`
 3. **`list_environments`** — if the target name already exists, follow **Duplicate environment name** and wait for the user's choice. Otherwise **`create_environment`** (new name) or resolve the existing environment per the user's choice.
-4. **`append_variables`** with all variables (see **Concealed variables**)
-5. **Git-tracked `.env`** — **all platforms**, including Windows:
+4. **Ask how to import the values.** Ask once, and wait for the answer:
+   - **Import in the 1Password app (recommended)** — secret values go straight from the file into 1Password and never pass through Claude.
+   - **Let Claude import them** — faster, but Claude reads the file, so every value in it is sent to the model and saved in the session transcript.
+
+   **If they choose the 1Password app:** tell them to go to **Developer** > **View Environments**, select *{environmentName}*, select **Import .env file**, and choose `{absolute path to the .env}`. Ask them to tell you when it's done, and wait.
+
+   **If they choose Claude:** Read the `.env` to get its keys and values. Strip optional surrounding quotes from values. Call `append_variables` with all variables (see **Concealed variables**). Never repeat values in chat.
+5. **`list_variables`** to confirm the import. Report the variable names only. If nothing arrived, return to step 4.
+6. **Git-tracked `.env`** — **all platforms**, including Windows:
    - If the `.env` is **git-tracked**, stop and tell the user to delete it and commit that removal ([local `.env` file docs](https://www.1password.dev/environments/local-env-file.md)). On macOS/Linux, do not proceed to mount until this is done.
-6. **Mount (macOS/Linux only)** — **always** (skip only if the user explicitly said not to mount; on **Windows**, skip entirely — see **Windows**):
+7. **Mount (macOS/Linux only)** — **always** (skip only if the user explicitly said not to mount; on **Windows**, skip entirely — see **Windows**):
    - `list_local_env_files` — skip `create_local_env_file` only if a mount already exists at the source path
    - `create_local_env_file` with `accountId`, `environmentId`, `environmentName`, `mountPath` (absolute path of the original `.env`)
    - `list_local_env_files` again to verify
@@ -161,13 +180,13 @@ If shell commands are blocked because 1Password expects a mount at the path, see
 
 **Create new Environment:** authenticate → `list_environments` → if the name exists, follow **Duplicate environment name** → `create_environment` only when the name is available or the user chose a different name.
 
-**Mount existing Environment:** authenticate → resolve environment → steps 5–6 above (step 6 macOS/Linux only).
+**Mount existing Environment:** authenticate → resolve environment → steps 6–7 above (step 7 macOS/Linux only).
 
 **Inspect names:** authenticate → resolve environment → `list_variables` → summarize names only.
 
 **Rename:** authenticate → resolve environment → confirm name → `rename_environment`.
 
-**Add/update variables:** authenticate → resolve environment → `list_variables` → `append_variables`.
+**Add/update variables:** only when the user explicitly asks → collect missing names and values from the user → authenticate → resolve environment → `list_variables` → `append_variables`. To keep a secret out of the chat entirely, the user can add it in the 1Password desktop app instead; offer that when they haven't pasted the value yet.
 
 ## Concealed variables
 
@@ -180,6 +199,7 @@ When calling `append_variables`, set `concealed` per variable:
 ## Safety
 
 - Never reveal secret values in chat
+- Never read a `.env` file that holds real values unless the user chose to let Claude import it (see **Never read secret values**)
 - Ask before changing variables unless the request is explicit
 
 ## Plugin hook
@@ -187,8 +207,8 @@ When calling `append_variables`, set `concealed` per variable:
 The plugin runs `validate-mounted-env-files.sh` as a `PreToolUse` hook on the `Bash`
 tool. It blocks Bash commands when 1Password expects a mount that is missing,
 disabled, or not a FIFO (for example a plain `.env` still on disk at the mount
-path). Only Bash is gated — Read, Edit, and Grep are unaffected, so the import
-flow below never needs a shell.
+path). Only Bash is gated — Read, Edit, Grep, and the MCP tools are unaffected, so
+the import flow never needs a shell.
 
 Validation modes and recovery steps: [reference.md](reference.md)
 

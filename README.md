@@ -158,7 +158,7 @@ When not running in debug mode, the hook writes logs to `/tmp/1password-claude-c
 
 ### MCP and agent skill
 
-The plugin connects Claude Code to the local 1Password MCP server and bundles the **`1password-environments`** skill (`skills/1password-environments/SKILL.md`). Claude reads that skill before calling MCP tools — it defines the complete workflow for importing a plain `.env` file, appending variables, and mounting at the source path. The MCP server's built-in docs cover tool basics but omit those import-and-mount steps.
+The plugin connects Claude Code to the local 1Password MCP server and bundles the **`1password-environments`** skill (`skills/1password-environments/SKILL.md`). Claude reads that skill before calling MCP tools — it defines the complete workflow for importing a plain `.env` file (by default through the 1Password desktop app, so Claude never reads its secret values), adding variables, and mounting at the source path. The MCP server's built-in docs cover tool basics but omit those import-and-mount steps.
 
 See `skills/1password-environments/reference.md` for setup, mount conflicts, and validation details.
 

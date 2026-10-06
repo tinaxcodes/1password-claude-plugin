@@ -94,8 +94,9 @@ environment files:
    - Temporarily set `mount_paths = []` in `.1password/environments.toml` to disable mount validation for this repo
    - Fix the mount in 1Password (enable the destination, or remove it until migration finishes)
 
-The import itself does not need shell — Read the `.env` directly to get its keys
-and values, then use MCP tools per [SKILL.md](SKILL.md).
+The import itself does not need shell — the user imports the `.env` in the
+1Password desktop app (or, if they choose, Claude reads it), and the rest uses
+MCP tools per [SKILL.md](SKILL.md).
 
 ### Debugging the hook
 
