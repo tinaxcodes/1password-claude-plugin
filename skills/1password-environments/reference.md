@@ -91,7 +91,7 @@ environment files:
 
 1. Check whether 1Password already has a destination for the same path (`list_local_env_files`, or the 1Password app Destinations tab)
 2. Resolve by one of:
-   - Temporarily set `mount_paths = []` in `.1password/environments.toml` to disable mount validation for this repo
+   - Temporarily set `mount_paths = []` in `.1password/environments.toml` to disable mount validation for this repo — ask the user first, and offer to revert it afterward
    - Fix the mount in 1Password (enable the destination, or remove it until migration finishes)
 
 The import itself does not need shell — the user imports the `.env` in the

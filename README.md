@@ -1,6 +1,6 @@
 # 1Password Plugin for Claude Code
 
-A [1Password](https://1password.com) plugin for [Claude Code](https://code.claude.com), built and maintained by 1Password. It ships three pieces that work together: a **PreToolUse hook** that validates locally mounted `.env` files before Bash commands run, an **agent skill** with the complete Developer Environment workflow, and **MCP configuration** for the 1Password desktop app server. Secret values stay in 1Password — the agent sees variable names and mount paths, not secret contents.
+A [1Password](https://1password.com) plugin for [Claude Code](https://code.claude.com), built and maintained by 1Password. It ships three pieces that work together: a **PreToolUse hook** that validates locally mounted `.env` files before Bash commands run, an **agent skill** with the complete Developer Environment workflow, and **MCP configuration** for the 1Password desktop app server. Secret values stay in 1Password — the agent sees variable names and mount paths, and only sees secret values when you choose to share them.
 
 Install the **plugin** rather than hand-configuring an MCP entry on its own. The bundled `1password-environments` skill is the authoritative agent workflow; the MCP server's built-in documentation resources cover tool basics only and omit the import-and-mount steps.
 
@@ -32,14 +32,27 @@ Before using this plugin, configure your secrets in 1Password:
 
 Installing the plugin registers the validation hook, the `1password-environments` agent skill, and the MCP server configuration together.
 
-**From this repository.** This repo is itself a plugin marketplace, so add it directly by its GitHub `owner/repo` name — no separate catalog needed:
+**From the Claude plugin directory (recommended).** Requires a Claude Pro, Max, Team, or Enterprise plan. On Team and Enterprise plans, the directory is only available if your organization's Owner allows it.
+
+1. Open [claude.ai](https://claude.ai) or the Claude desktop app and sign in.
+2. Select **Customize** > **Plugins**.
+3. Select **Discover**, search for **1Password**, then select the 1Password plugin and select **Add**.
+4. Select **Continue** to approve the connection.
+5. Start a new Claude Code session signed in with the same claude.ai account. The plugin syncs automatically. If Claude Code shows "Plugins changed", run `/reload-plugins`.
+6. Run `/plugin` and check the **Installed** tab for `1password@synced`.
+
+Syncing to Claude Code requires Claude Code v2.1.273 or later and a claude.ai sign-in. If you sign in with an API key, install from this repository instead.
+
+**From this repository.** This repo is itself a plugin marketplace. In a Claude Code session, run:
 
 ```
-claude /plugin marketplace add 1Password/1password-claude-plugin
-claude /plugin install 1password@1password
+/plugin marketplace add 1Password/1password-claude-plugin
+/plugin install 1password@1password
 ```
 
 Run `/plugin` afterwards to confirm the plugin is installed and the MCP server is connected.
+
+> **Switching to the directory version?** If you installed from this repository before, uninstall that copy first with `claude plugin uninstall 1password@1password`. Otherwise it takes precedence and the directory version won't load.
 
 **For local development**, point Claude Code at a checkout instead:
 
