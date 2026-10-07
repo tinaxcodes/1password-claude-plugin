@@ -1,5 +1,5 @@
 {
-  "name": "1password",
+  "name": "1password-test",
   "owner": {
     "name": "1Password",
     "url": "https://www.1password.dev/"
@@ -7,7 +7,7 @@
   "description": "Official 1Password plugins for Claude Code",
   "plugins": [
     {
-      "name": "1password",
+      "name": "1password-test",
       "source": "./",
       "description": "Keep secrets, API keys, and tokens out of committed .env files by importing and mounting them as 1Password Developer Environments.",
       "category": "security"
